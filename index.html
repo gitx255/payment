@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدير المالية الاحترافي</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- [جديد] PDF Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* تخصيص خطوط جوجل (اختياري ولكن يحسن الشكل) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Cairo:wght@400;700&display=swap');
+        body, .nav-link, .form-control, .btn, .card-title, .card-text {
+            font-family: 'Cairo', 'Inter', sans-serif;
+        }
+
+        .total-balance-card {
+            transition: all 0.3s ease;
+        }
+
+        .nav-tabs .nav-link {
+            color: #495057;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #000;
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff;
+            font-weight: 700;
+        }
+        
+        /* لجعل شريط الـ Tabs أفقيًا على الموبايل مع سكرول */
+        .nav-tabs-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+        .nav-tabs {
+            flex-wrap: nowrap;
+            border-bottom: 0;
+        }
+        .nav-tabs .nav-item {
+            flex-shrink: 0;
+        }
+        .nav-tabs .nav-link {
+             border-bottom: 1px solid #dee2e6;
+        }
+        
+        .tab-content {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-top: 0;
+            border-radius: 0 0 0.375rem 0.375rem;
+            padding: 1.5rem;
+        }
+        
+        .form-floating {
+            margin-bottom: 1rem;
+        }
+        
+        .btn-primary {
+             background-color: #0d6efd;
+             border-color: #0d6efd;
+        }
+        
+        .btn-success-soft {
+            background-color: rgba(25, 135, 84, 0.1);
+            color: #198754;
+            border: 1px solid rgba(25, 135, 84, 0.3);
+        }
+        
+        .btn-danger-soft {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        /* To-Do List Styling */
+        .debt-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .debt-item.completed .debt-text {
+            text-decoration: line-through;
+            color: #6c757d;
+        }
+        .debt-item .debt-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .debt-note {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container-fluid p-3 p-md-4" style="max-width: 1200px;">
+
+        <!-- العنوان الرئيسي -->
+        <header class="mb-4">
+            <h1 class="h3 fw-bold text-center text-primary"><i class="bi bi-wallet2"></i> المدير المالي الاحترافي</h1>
+        </header>
+
+        <!-- كارت الإجمالي -->
+        <div class="card shadow-sm border-0 total-balance-card mb-4">
+            <div class="card-body text-center p-4">
+                <h5 class="card-title text-muted fw-bold">الرصيد الإجمالي</h5>
+                <h2 class="card-text fw-bolder" id="totalBalanceDisplay">0.00 ج.م</h2>
+            </div>
+        </div>
+
+        <!-- شريط التنقل (Tabs) -->
+        <div class="nav-tabs-container mb-0">
+            <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-pane" type="button" role="tab" aria-controls="home-pane" aria-selected="true"><i class="bi bi-house-door-fill"></i> الرئيسية (إدخال)</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="person-a-tab" data-bs-toggle="tab" data-bs-target="#person-a-pane" type="button" role="tab" aria-controls="person-a-pane" aria-selected="false"><i class="bi bi-person-fill"></i> شخص A</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="person-b-tab" data-bs-toggle="tab" data-bs-target="#person-b-pane" type="button" role="tab" aria-controls="person-b-pane" aria-selected="false"><i class="bi bi-person-fill"></i> شخص B</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="person-c-tab" data-bs-toggle="tab" data-bs-target="#person-c-pane" type="button" role="tab" aria-controls="person-c-pane" aria-selected="false"><i class="bi bi-person-fill"></i> شخص C</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="person-d-tab" data-bs-toggle="tab" data-bs-target="#person-d-pane" type="button" role="tab" aria-controls="person-d-pane" aria-selected="false"><i class="bi bi-person-fill"></i> شخص D</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expenses-pane" type="button" role="tab" aria-controls="expenses-pane" aria-selected="false"><i class="bi bi-cart-dash-fill"></i> المصروفات</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="debts-tab" data-bs-toggle="tab" data-bs-target="#debts-pane" type="button" role="tab" aria-controls="debts-pane" aria-selected="false"><i class="bi bi-list-check"></i> المديونات</button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- محتوى الـ Tabs -->
+        <div class="tab-content shadow-sm" id="mainTabsContent">
+            
+            <!-- ١. لوحة الإدخال الرئيسية -->
+            <div class="tab-pane fade show active" id="home-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+                <h4 class="mb-3 border-bottom pb-2">إضافة معاملة جديدة</h4>
+                <form id="addTransactionForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <select class="form-select" id="personSelect" required>
+                                    <option value="" selected disabled>اختر الشخص...</option>
+                                    <option value="a">شخص A</option> <!-- سيتم تحديثه بـ JS -->
+                                    <option value="b">شخص B</option> <!-- سيتم تحديثه بـ JS -->
+                                    <option value="c">شخص C</option> <!-- سيتم تحديثه بـ JS -->
+                                    <option value="d">شخص D</option> <!-- سيتم تحديثه بـ JS -->
+                                </select>
+                                <label for="personSelect">الشخص</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                             <div class="form-floating">
+                                <input type="date" class="form-control" id="transactionDate" required>
+                                <label for="transactionDate">التاريخ</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-floating">
+                        <input type="number" class="form-control" id="transactionAmount" placeholder="المبلغ" min="0.01" step="0.01" required>
+                        <label for="transactionAmount">المبلغ (إضافة للرصيد)</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-plus-circle-fill"></i> إضافة المبلغ</button>
+                </form>
+            </div>
+
+            <!-- ٢. لوحة شخص A -->
+            <div class="tab-pane fade" id="person-a-pane" role="tabpanel" aria-labelledby="person-a-tab" tabindex="0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">سجل معاملات: شخص A</h4> <!-- سيتم تحديثه بـ JS -->
+                    <div>
+                        <button class="btn btn-success-soft btn-sm" onclick="exportTableToCSV('a')">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button class="btn btn-danger-soft btn-sm ms-2" onclick="exportElementToPDF('a', 'table-container-a', '#person-a-pane h4')">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" id="table-container-a">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المبلغ</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body-a">
+                            <!-- سيتم ملء البيانات هنا -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ٣. لوحة شخص B -->
+            <div class="tab-pane fade" id="person-b-pane" role="tabpanel" aria-labelledby="person-b-tab" tabindex="0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">سجل معاملات: شخص B</h4> <!-- سيتم تحديثه بـ JS -->
+                    <div>
+                        <button class="btn btn-success-soft btn-sm" onclick="exportTableToCSV('b')">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button class="btn btn-danger-soft btn-sm ms-2" onclick="exportElementToPDF('b', 'table-container-b', '#person-b-pane h4')">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" id="table-container-b">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المبلغ</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body-b">
+                            <!-- سيتم ملء البيانات هنا -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ٤. لوحة شخص C -->
+            <div class="tab-pane fade" id="person-c-pane" role="tabpanel" aria-labelledby="person-c-tab" tabindex="0">
+                 <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">سجل معاملات: شخص C</h4> <!-- سيتم تحديثه بـ JS -->
+                    <div>
+                        <button class="btn btn-success-soft btn-sm" onclick="exportTableToCSV('c')">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button class="btn btn-danger-soft btn-sm ms-2" onclick="exportElementToPDF('c', 'table-container-c', '#person-c-pane h4')">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" id="table-container-c">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المبلغ</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body-c">
+                            <!-- سيتم ملء البيانات هنا -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ٥. لوحة شخص D -->
+            <div class="tab-pane fade" id="person-d-pane" role="tabpanel" aria-labelledby="person-d-tab" tabindex="0">
+                 <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">سجل معاملات: شخص D</h4> <!-- سيتم تحديثه بـ JS -->
+                    <div>
+                        <button class="btn btn-success-soft btn-sm" onclick="exportTableToCSV('d')">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button class="btn btn-danger-soft btn-sm ms-2" onclick="exportElementToPDF('d', 'table-container-d', '#person-d-pane h4')">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" id="table-container-d">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المبلغ</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body-d">
+                            <!-- سيتم ملء البيانات هنا -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ٦. لوحة المصروفات -->
+            <div class="tab-pane fade" id="expenses-pane" role="tabpanel" aria-labelledby="expenses-tab" tabindex="0">
+                <h4 class="mb-3 border-bottom pb-2">إضافة مصروف جديد</h4>
+                <form id="addExpenseForm">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="expenseDescription" placeholder="وصف المصروف" required>
+                        <label for="expenseDescription">وصف المصروف (مثال: فاتورة كهرباء)</label>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="date" class="form-control" id="expenseDate" required>
+                                <label for="expenseDate">تاريخ المصروف</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="number" class="form-control" id="expenseAmount" placeholder="المبلغ" min="0.01" step="0.01" required>
+                                <label for="expenseAmount">المبلغ (خصم من الرصيد)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100"><i class="bi bi-dash-circle-fill"></i> تسجيل المصروف</button>
+                </form>
+
+                <hr class="my-4">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">سجل المصروفات</h5>
+                    <div>
+                        <button class="btn btn-success-soft btn-sm" onclick="exportTableToCSV('expenses')">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button class="btn btn-danger-soft btn-sm ms-2" onclick="exportElementToPDF('expenses', 'table-container-expenses', '#expenses-pane h5')">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" id="table-container-expenses">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الوصف</th>
+                                <th>المبلغ</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body-expenses">
+                            <!-- سيتم ملء البيانات هنا -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ٧. لوحة المديونات (To-Do List) -->
+            <div class="tab-pane fade" id="debts-pane" role="tabpanel" aria-labelledby="debts-tab" tabindex="0">
+                <h4 class="mb-3 border-bottom pb-2">قائمة المديونات (مهام)</h4>
+                <form id="addDebtForm" class="mb-3">
+                     <div class="form-floating">
+                        <input type="text" class="form-control" id="debtText" placeholder="وصف الدين/المهمة" required>
+                        <label for="debtText">وصف الدين/المهمة</label>
+                    </div>
+                     <div class="form-floating">
+                        <input type="text" class="form-control" id="debtNote" placeholder="ملاحظات (اختياري)">
+                        <label for="debtNote">ملاحظات (اختياري)</label>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-journal-plus"></i> إضافة للقائمة</button>
+                </form>
+
+                <!-- [!!] إصلاح: تم إضافة الجزء المفقود الخاص بقائمة المديونات [!!] -->
+                <h5 class="mt-4">المهام الحالية</h5>
+                <ul class="list-group" id="debtList">
+                    <!-- سيتم ملء البيانات هنا -->
+                </ul>
+                <!-- [!!] نهاية الإصلاح [!!] -->
+
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <!-- Custom App Logic -->
+    <script>
+        
+        // --- [!!] متغيرات الأسماء الرئيسية [!!] ---
+        // قم بتغيير الأسماء هنا كما تشاء
+        // المفتاح (مثل 'a') يجب أن يبقى كما هو، قم بتغيير القيمة (مثل 'أحمد')
+        const personConfig = {
+            a: 'أحمد',
+            b: '33',
+            c: 'سارة',
+            d: 'فاطمة'
+        };
+        // -----------------------------------------
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- الإعدادات الأولية ---
+            const STORAGE_KEY = 'myProfessionalFinanceApp_v1';
+            
+            // جلب العناصر الأساسية
+            const totalBalanceDisplay = document.getElementById('totalBalanceDisplay');
+            const totalBalanceCard = document.querySelector('.total-balance-card');
+
+            // نماذج الإدخال
+            const transactionForm = document.getElementById('addTransactionForm');
+            const expenseForm = document.getElementById('addExpenseForm');
+            const debtForm = document.getElementById('addDebtForm');
+            
+            // جداول البيانات
+            const tableBodies = {
+                a: document.getElementById('table-body-a'),
+                b: document.getElementById('table-body-b'),
+                c: document.getElementById('table-body-c'),
+                d: document.getElementById('table-body-d'),
+                expenses: document.getElementById('table-body-expenses')
+            };
+
+            // قائمة المديونات
+            const debtList = document.getElementById('debtList');
+
+            // عناصر نموذج الإدخال الرئيسي
+            const personSelect = document.getElementById('personSelect');
+            const transactionDate = document.getElementById('transactionDate');
+            const transactionAmount = document.getElementById('transactionAmount');
+
+            // عناصر نموذج المصروفات
+            const expenseDescription = document.getElementById('expenseDescription');
+            const expenseDate = document.getElementById('expenseDate');
+            const expenseAmount = document.getElementById('expenseAmount');
+            
+            // عناصر نموذج المديونات
+            const debtText = document.getElementById('debtText');
+            const debtNote = document.getElementById('debtNote');
+
+            // --- [تحديث] تطبيق الأسماء المتغيرة على الواجهة ---
+            function applyPersonConfig() {
+                // تحديث القائمة المنسدلة
+                document.querySelector('#personSelect option[value="a"]').textContent = personConfig.a;
+                document.querySelector('#personSelect option[value="b"]').textContent = personConfig.b;
+                document.querySelector('#personSelect option[value="c"]').textContent = personConfig.c;
+                document.querySelector('#personSelect option[value="d"]').textContent = personConfig.d;
+
+                // تحديث أزرار التنقل (Tabs)
+                document.getElementById('person-a-tab').innerHTML = `<i class="bi bi-person-fill"></i> ${personConfig.a}`;
+                document.getElementById('person-b-tab').innerHTML = `<i class="bi bi-person-fill"></i> ${personConfig.b}`;
+                document.getElementById('person-c-tab').innerHTML = `<i class="bi bi-person-fill"></i> ${personConfig.c}`;
+                document.getElementById('person-d-tab').innerHTML = `<i class="bi bi-person-fill"></i> ${personConfig.d}`;
+
+                // تحديث العناوين داخل كل صفحة
+                document.querySelector('#person-a-pane h4').textContent = `سجل معاملات: ${personConfig.a}`;
+                document.querySelector('#person-b-pane h4').textContent = `سجل معاملات: ${personConfig.b}`;
+                document.querySelector('#person-c-pane h4').textContent = `سجل معاملات: ${personConfig.c}`;
+                document.querySelector('#person-d-pane h4').textContent = `سجل معاملات: ${personConfig.d}`;
+            }
+            // ----------------------------------------------------
+
+            // تعيين التواريخ الافتراضية لليوم
+            const today = new Date().toISOString().split('T')[0];
+            transactionDate.value = today;
+            expenseDate.value = today;
+
+            // --- إدارة الحالة (State) ---
+            let appData = {
+                transactions: [], // {id, person, date, amount}
+                expenses: [],     // {id, description, date, amount}
+                debts: []         // {id, text, note, completed}
+            };
+
+            // --- وظائف Local Storage ---
+            function saveData() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            }
+
+            function loadData() {
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (data) {
+                    appData = JSON.parse(data);
+                    // ضمان وجود كل المفاتيح حتى لو كانت النسخة المحفوظة قديمة
+                    appData.transactions = appData.transactions || [];
+                    appData.expenses = appData.expenses || [];
+                    appData.debts = appData.debts || [];
+                }
+            }
+            
+            // --- وظائف مساعدة ---
+            function formatCurrency(amount) {
+                // تنسيق العملة بالجنيه المصري
+                return new Intl.NumberFormat('ar-EG', { 
+                    style: 'currency', 
+                    currency: 'EGP',
+                    minimumFractionDigits: 2 
+                }).format(amount);
+            }
+            
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+            }
+            
+            // --- وظائف العرض (Render) الأساسية ---
+            
+            // 1. تحديث الإجمالي
+            function updateTotals() {
+                const totalIncome = appData.transactions.reduce((sum, t) => sum + t.amount, 0);
+                const totalExpenses = appData.expenses.reduce((sum, e) => sum + e.amount, 0);
+                const netBalance = totalIncome - totalExpenses;
+
+                totalBalanceDisplay.textContent = formatCurrency(netBalance);
+                
+                // تغيير لون الكارت بناءً على الرصيد
+                totalBalanceCard.classList.remove('bg-success-subtle', 'text-success-emphasis', 'bg-danger-subtle', 'text-danger-emphasis');
+                if (netBalance > 0) {
+                    totalBalanceCard.classList.add('bg-success-subtle', 'text-success-emphasis');
+                } else if (netBalance < 0) {
+                    totalBalanceCard.classList.add('bg-danger-subtle', 'text-danger-emphasis');
+                }
+            }
+            
+            // 2. عرض جداول المعاملات (أ, ب, ج, د)
+            function renderTransactionTables() {
+                ['a', 'b', 'c', 'd'].forEach(person => {
+                    const tableBody = tableBodies[person];
+                    tableBody.innerHTML = ''; // إفراغ الجدول أولاً
+                    
+                    const personTransactions = appData.transactions
+                        .filter(t => t.person === person)
+                        .sort((a, b) => new Date(b.date) - new Date(a.date)); // ترتيب تنازلي
+                        
+                    if (personTransactions.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">لا توجد معاملات لعرضها.</td></tr>';
+                        return;
+                    }
+                    
+                    personTransactions.forEach(t => {
+                        const row = `
+                            <tr data-id="${t.id}">
+                                <td>${t.date}</td>
+                                <td class="fw-bold text-success">${formatCurrency(t.amount)}</td>
+                                <td>
+                                    <button class="btn btn-danger-soft btn-sm delete-transaction">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+                    });
+                });
+            }
+            
+            // 3. عرض جدول المصروفات
+            function renderExpenseTable() {
+                const tableBody = tableBodies.expenses;
+                tableBody.innerHTML = '';
+                
+                const sortedExpenses = appData.expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (sortedExpenses.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد مصروفات لعرضها.</td></tr>';
+                    return;
+                }
+                
+                sortedExpenses.forEach(e => {
+                    const row = `
+                        <tr data-id="${e.id}">
+                            <td>${e.date}</td>
+                            <td>${e.description}</td>
+                            <td class="fw-bold text-danger">(${formatCurrency(e.amount)})</td>
+                            <td>
+                                <button class="btn btn-danger-soft btn-sm delete-expense">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            }
+
+            // 4. عرض قائمة المديونات (To-Do)
+            function renderDebtList() {
+                // التحقق أولاً من وجود العنصر لتجنب الأخطاء
+                if (!debtList) {
+                    console.error('Error: debtList element not found.');
+                    return;
+                }
+                
+                debtList.innerHTML = '';
+                
+                const sortedDebts = appData.debts.sort((a, b) => a.completed - b.completed);
+
+                if (sortedDebts.length === 0) {
+                    debtList.innerHTML = '<li class="list-group-item text-center text-muted">لا توجد مديونات/مهام مسجلة.</li>';
+                    return;
+                }
+
+                sortedDebts.forEach(d => {
+                    const completedClass = d.completed ? 'completed' : '';
+                    const icon = d.completed ? 'bi-check-circle-fill text-success' : 'bi-circle';
+                    
+                    const item = `
+                        <li class="list-group-item debt-item ${completedClass}" data-id="${d.id}">
+                            <div>
+                                <button class="btn btn-link p-0 me-2 toggle-debt" style="font-size: 1.2rem; text-decoration: none;">
+                                    <i class="bi ${icon}"></i>
+                                </button>
+                                <span class="debt-text fw-medium">${d.text}</span>
+                                ${d.note ? `<div class="debt-note ms-4 ps-3">${d.note}</div>` : ''}
+                            </div>
+                            <div class="debt-actions">
+                                <button class="btn btn-danger-soft btn-sm delete-debt">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </li>
+                    `;
+                    debtList.innerHTML += item;
+                });
+            }
+            
+            // --- وظيفة التحديث الشاملة ---
+            function updateUI() {
+                updateTotals();
+                renderTransactionTables();
+                renderExpenseTable();
+                renderDebtList();
+            }
+
+            // --- معالجات الأحداث (Event Handlers) ---
+            
+            // 1. إضافة معاملة (إيداع)
+            transactionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const newTransaction = {
+                    id: generateId(),
+                    person: personSelect.value,
+                    date: transactionDate.value,
+                    amount: parseFloat(transactionAmount.value)
+                };
+                
+                if (newTransaction.amount <= 0 || !newTransaction.person || !newTransaction.date) {
+                    alert('يرجى ملء جميع الحقول بشكل صحيح.'); // استبدل هذا بمودال في المستقبل
+                    return;
+                }
+                
+                appData.transactions.push(newTransaction);
+                saveData();
+                updateUI();
+                
+                // إعادة تعيين النموذج
+                transactionForm.reset();
+                transactionDate.value = today; // إعادة تعيين التاريخ لليوم
+            });
+            
+            // 2. إضافة مصروف
+            expenseForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const newExpense = {
+                    id: generateId(),
+                    description: expenseDescription.value,
+                    date: expenseDate.value,
+                    amount: parseFloat(expenseAmount.value)
+                };
+                
+                if (newExpense.amount <= 0 || !newExpense.description || !newExpense.date) {
+                    alert('يرجى ملء جميع الحقول بشكل صحيح.');
+                    return;
+                }
+                
+                appData.expenses.push(newExpense);
+                saveData();
+                updateUI();
+                
+                expenseForm.reset();
+                expenseDate.value = today;
+            });
+
+            // 3. إضافة دين/مهمة
+            debtForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const text = debtText.value.trim();
+                const note = debtNote.value.trim();
+                
+                if (!text) return;
+                
+                const newDebt = {
+                    id: generateId(),
+                    text: text,
+                    note: note,
+                    completed: false
+                };
+                
+                appData.debts.push(newDebt);
+                saveData();
+                updateUI();
+                
+                debtForm.reset();
+            });
+            
+            // 4. معالجة الحذف (باستخدام تفويض الأحداث)
+            document.body.addEventListener('click', (e) => {
+                const target = e.target;
+                
+                // حذف معاملة (إيداع)
+                if (target.classList.contains('delete-transaction') || target.closest('.delete-transaction')) {
+                    const row = target.closest('tr');
+                    const id = row.dataset.id;
+                    appData.transactions = appData.transactions.filter(t => t.id !== id);
+                    saveData();
+                    updateUI();
+                }
+                
+                // حذف مصروف
+                if (target.classList.contains('delete-expense') || target.closest('.delete-expense')) {
+                    const row = target.closest('tr');
+                    const id = row.dataset.id;
+                    appData.expenses = appData.expenses.filter(e => e.id !== id);
+                    saveData();
+                    updateUI();
+                }
+                
+                // حذف دين/مهمة
+                if (target.classList.contains('delete-debt') || target.closest('.delete-debt')) {
+                    const item = target.closest('li');
+                    const id = item.dataset.id;
+                    appData.debts = appData.debts.filter(d => d.id !== id);
+                    saveData();
+                    updateUI();
+                }
+                
+                // تبديل حالة الدين (مكتمل/غير مكتمل)
+                if (target.classList.contains('toggle-debt') || target.closest('.toggle-debt')) {
+                    const item = target.closest('li');
+                    const id = item.dataset.id;
+                    const debt = appData.debts.find(d => d.id === id);
+                    if (debt) {
+                        debt.completed = !debt.completed;
+                        saveData();
+                        updateUI();
+                    }
+                }
+            });
+
+            // --- التحميل الأولي ---
+            loadData();
+            applyPersonConfig(); // تطبيق الأسماء عند التحميل
+            updateUI();
+        });
+        
+        // --- وظيفة التصدير إلى CSV ---
+        // (خارج نطاق DOMContentLoaded لأنها مرتبطة بـ onclick)
+        function exportTableToCSV(type) {
+            let data;
+            let filename;
+            let headers = [];
+
+            const appData = JSON.parse(localStorage.getItem('myProfessionalFinanceApp_v1') || '{}');
+
+            if (['a', 'b', 'c', 'd'].includes(type)) {
+                data = (appData.transactions || []).filter(t => t.person === type);
+                // [تحديث] استخدام الاسم من المتغير
+                const personName = personConfig[type] || type; 
+                filename = `transactions_${personName}_${new Date().toISOString().split('T')[0]}.csv`;
+                if(data.length > 0) headers = ['ID', 'الشخص', 'التاريخ', 'المبلغ'];
+                // [تحديث] إضافة الاسم الحقيقي للبيانات المصدرة
+                data = data.map(item => [item.id, personName, item.date, item.amount]);
+                
+            } else if (type === 'expenses') {
+                data = appData.expenses || [];
+                filename = `expenses_${new Date().toISOString().split('T')[0]}.csv`;
+                if(data.length > 0) headers = ['ID', 'الوصف', 'التاريخ', 'المبلغ'];
+                 data = data.map(item => [item.id, item.description, item.date, item.amount]);
+            } else {
+                return;
+            }
+
+            if (data.length === 0) {
+                alert('لا توجد بيانات للتصدير.'); // استبدل هذا بمودال
+                return;
+            }
+
+            // إضافة BOM لضمان قراءة اللغة العربية بشكل صحيح في Excel
+            const BOM = '\uFEFF';
+            let csvContent = BOM;
+            
+            // إضافة العناوين
+            csvContent += headers.join(',') + '\r\n';
+
+            // إضافة الصفوف
+            data.forEach(rowArray => {
+                // التأكد من أن كل قيمة نصية ومحاطة بعلامات اقتباس للتعامل مع الفواصل
+                let row = rowArray.map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+                csvContent += row + '\r\n';
+            });
+
+            // إنشاء وتنزيل الملف
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // --- [جديد] وظيفة التصدير إلى PDF ---
+        // (تستخدم html2canvas لالتقاط صورة للعنصر)
+        async function exportElementToPDF(type, tableElementId, titleElementSelector) {
+            // البحث عن الزر المحدد لإظهار مؤشر التحميل
+            const pdfButton = document.querySelector(`button[onclick*="${tableElementId}"]`);
+            if (pdfButton) {
+                pdfButton.disabled = true;
+                pdfButton.innerHTML = '<i class="bi bi-hourglass-split"></i> جاري الإنشاء...';
+            }
+
+            try {
+                // تهيئة المكتبات
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4'); // 'p' = portrait, 'mm' = millimeters, 'a4' = paper size
+                
+                const titleElement = document.querySelector(titleElementSelector);
+                const tableElement = document.getElementById(tableElementId);
+                
+                if (!titleElement || !tableElement) {
+                    throw new Error('لم يتم العثور على عناصر PDF.');
+                }
+                
+                // 1. التقاط صورة للعنوان
+                const titleCanvas = await window.html2canvas(titleElement, { scale: 2, useCORS: true });
+                const titleImgData = titleCanvas.toDataURL('image/png');
+                
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageMargin = 10;
+                const contentWidth = pageWidth - (pageMargin * 2);
+                
+                const titleWidth = contentWidth;
+                const titleHeight = (titleCanvas.height * titleWidth) / titleCanvas.width;
+                let currentY = 15; // هامش علوي
+
+                doc.addImage(titleImgData, 'PNG', pageMargin, currentY, titleWidth, titleHeight);
+                
+                currentY += titleHeight + 10; // إضافة مسافة بعد العنوان
+
+                // 2. التقاط صورة للجدول
+                const tableCanvas = await window.html2canvas(tableElement, { scale: 2, useCORS: true });
+                const tableImgData = tableCanvas.toDataURL('image/png');
+                const tableWidth = contentWidth;
+                const tableHeight = (tableCanvas.height * tableWidth) / tableCanvas.width;
+
+                // 3. التحقق إذا كان الجدول سيتجاوز الصفحة
+                if (currentY + tableHeight > doc.internal.pageSize.getHeight() - pageMargin) {
+                    doc.addPage();
+                    currentY = 15; // إعادة تعيين الهامش العلوي للصفحة الجديدة
+                }
+                
+                doc.addImage(tableImgData, 'PNG', pageMargin, currentY, tableWidth, tableHeight);
+
+                // 4. تحديد اسم الملف
+                let filename = 'report.pdf';
+                if (['a', 'b', 'c', 'd'].includes(type)) {
+                    const personName = personConfig[type] || type; 
+                    filename = `transactions_${personName}_${new Date().toISOString().split('T')[0]}.pdf`;
+                } else if (type === 'expenses') {
+                    filename = `expenses_${new Date().toISOString().split('T')[0]}.pdf`;
+                }
+                
+                // 5. حفظ الملف
+                doc.save(filename);
+                
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                // لا نستخدم alert هنا
+            } finally {
+                // إعادة الزر لحالته الطبيعية
+                if (pdfButton) {
+                    pdfButton.disabled = false;
+                    pdfButton.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> تصدير PDF';
+                }
+            }
+        }
+
+    </script>
+
+</body>
+</html>
+
